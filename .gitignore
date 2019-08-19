@@ -1,0 +1,14 @@
+checkpoint/
+data/
+results/
+models/
+results*.txt
+*.pkl
+__pycache__
+resnet.py
+autoaugment.py
+random*.py
+main_en.py
+main_se.py
+data_loader.py
+
