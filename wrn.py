@@ -73,6 +73,8 @@ class WideResNet(nn.Module):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
+                n = 1.0/(num_classes)**(0.5)
+                m.weight.data.uniform_(-1*n, n)
                 m.bias.data.zero_()
 
     def forward(self, x):
