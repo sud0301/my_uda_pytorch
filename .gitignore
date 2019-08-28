@@ -12,3 +12,8 @@ main_en.py
 main_se.py
 data_loader.py
 
+*.sh
+myprog.*
+
+main_4k.py
+autoaugment_extra_only_color.py
