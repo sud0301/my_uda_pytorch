@@ -63,7 +63,7 @@ parse.add_argument('--autoaugment', action='store_true', help='use autoaugment a
 args = parse.parse_args()
 
 #CHECKPOINT_DIR = './results/dataset_' + str(args.dataset)  + '_labels_' + str(args.num_labeled) + '_batch_lab_' +  str(args.batch_size_lab) + '_batch_unlab_' + str(args.batch_size_unlab)  + '_steps_' + str(args.num_steps) +'_warmup_' + str(args.warm_up_steps) + '_softmax_temp_' + str(args.softmax_temp) + '_conf_mask_' + str(args.confidence_mask) + '_SEED_' + str(args.seed)
-CHECKPOINT_DIR = './results/dataset_' + str(args.dataset) + '_labels_' + str(args.num_labeled) + '_batch_lab_' +  str(args.batch_size_lab) + '_batch_unlab_' + str(args.batch_size_unlab)  + '_steps_' + str(args.num_steps) +'_warmup_' + str(args.warm_up_steps) + '_softmax_temp_' + str(args.softmax_temp) + '_conf_mask_' + str(args.confidence_mask) + '_SEED_' + str(args.seed)
+CHECKPOINT_DIR = './results/dataset_CIFAR5_labels_' + str(args.num_labeled) + '_batch_lab_' +  str(args.batch_size_lab) + '_batch_unlab_' + str(args.batch_size_unlab)  + '_steps_' + str(args.num_steps) +'_warmup_' + str(args.warm_up_steps) + '_softmax_temp_' + str(args.softmax_temp) + '_conf_mask_' + str(args.confidence_mask) + '_SEED_' + str(args.seed)
 
 if not os.path.exists(CHECKPOINT_DIR):
     os.makedirs(CHECKPOINT_DIR)
@@ -153,7 +153,7 @@ labeled_indices, unlabeled_indices = train_ids[mask], train_ids[~ mask]
 mask_ = np.zeros(train_ids.shape[0], dtype=np.bool)
 mask_test = np.zeros(test_ids.shape[0], dtype=np.bool)
 labels_test = np.array([testset[i][1] for i in test_ids], dtype=np.int64)
-for i in range(10):
+for i in range(5):
     mask[np.where(labels == i)[0][: int(args.num_labeled / args.num_classes)]] = True
     mask_[np.where(labels == i)[0][int(args.num_labeled / args.num_classes): ]] = True
     mask_test[np.where(labels_test == i)[0]] = True

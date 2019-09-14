@@ -17,7 +17,7 @@ import pickle
 import numpy as np
 
 #from models.senet import *
-#from utils import progress_bar
+from utils import progress_bar
 from augment.cutout import Cutout
 
 #from resnet import resnet18
@@ -33,7 +33,7 @@ parse = argparse.ArgumentParser(description='PyTorch SSL CIFAR10 UDA Training')
 parse.add_argument('--dataset', type=str, default=DATASET, help='dataset')
 parse.add_argument('--num-classes', default=10, type=int, help='number of classes')
 
-parse.add_argument('--lr', default=0.03, type=float, help='learning rate')
+parse.add_argument('--lr', default=0.003, type=float, help='learning rate')
 parse.add_argument('--softmax-temp', default=-1, type=float, help='softmax temperature controlling')
 parse.add_argument('--confidence-mask', default=-1, type=float, help='Confidence value for masking')
 
@@ -48,6 +48,7 @@ parse.add_argument('--num-cycles', default=1, type=int, help='number of sgdr cyc
 
 parse.add_argument('--split-id', type=str, default=SPLIT_ID, help='restore partial id list')
 parse.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
+parse.add_argument('--resume-path', type=str, default=None, help='dataset')
 parse.add_argument('--verbose', action='store_true', help='show progress bar')
 parse.add_argument('--seed', default=SEED, type=int, help='seed index')
 
@@ -63,7 +64,7 @@ parse.add_argument('--autoaugment', action='store_true', help='use autoaugment a
 args = parse.parse_args()
 
 #CHECKPOINT_DIR = './results/dataset_' + str(args.dataset)  + '_labels_' + str(args.num_labeled) + '_batch_lab_' +  str(args.batch_size_lab) + '_batch_unlab_' + str(args.batch_size_unlab)  + '_steps_' + str(args.num_steps) +'_warmup_' + str(args.warm_up_steps) + '_softmax_temp_' + str(args.softmax_temp) + '_conf_mask_' + str(args.confidence_mask) + '_SEED_' + str(args.seed)
-CHECKPOINT_DIR = './results/dataset_' + str(args.dataset) + '_labels_' + str(args.num_labeled) + '_batch_lab_' +  str(args.batch_size_lab) + '_batch_unlab_' + str(args.batch_size_unlab)  + '_steps_' + str(args.num_steps) +'_warmup_' + str(args.warm_up_steps) + '_softmax_temp_' + str(args.softmax_temp) + '_conf_mask_' + str(args.confidence_mask) + '_SEED_' + str(args.seed)
+CHECKPOINT_DIR = './results/dataset_CIFAR5_labels_' + str(args.num_labeled) + '_batch_lab_' +  str(args.batch_size_lab) + '_batch_unlab_' + str(args.batch_size_unlab)  + '_steps_' + str(args.num_steps) +'_warmup_' + str(args.warm_up_steps) + '_softmax_temp_' + str(args.softmax_temp) + '_conf_mask_' + str(args.confidence_mask) + '_SEED_' + str(args.seed) + '_ft'
 
 if not os.path.exists(CHECKPOINT_DIR):
     os.makedirs(CHECKPOINT_DIR)
@@ -153,7 +154,7 @@ labeled_indices, unlabeled_indices = train_ids[mask], train_ids[~ mask]
 mask_ = np.zeros(train_ids.shape[0], dtype=np.bool)
 mask_test = np.zeros(test_ids.shape[0], dtype=np.bool)
 labels_test = np.array([testset[i][1] for i in test_ids], dtype=np.int64)
-for i in range(10):
+for i in range(5, 10):
     mask[np.where(labels == i)[0][: int(args.num_labeled / args.num_classes)]] = True
     mask_[np.where(labels == i)[0][int(args.num_labeled / args.num_classes): ]] = True
     mask_test[np.where(labels_test == i)[0]] = True
@@ -186,15 +187,17 @@ if args.resume:
     # Load checkpoint.
     print('==> Resuming from checkpoint..')
     assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load('./checkpoint/ckpt.t7')
+    checkpoint = torch.load(args.resume_path + '/best_ckpt.t7')
     net.load_state_dict(checkpoint['net'])
     best_acc = checkpoint['acc']
-    start_epoch = checkpoint['epoch']
+    #start_epoch = checkpoint['cycle']
+    net.cuda()
+
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4, nesterov=True)
 #optimizer = optim.Adam(net.parameters(), lr=args.lr, betas= (0.9, 0.999))
-scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_steps, eta_min=0.0001)
+scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_steps, eta_min=0.00001)
 
 def _kl_divergence_with_logits(p_logits, q_logits):
     p = torch.nn.functional.softmax(p_logits, dim=1)
@@ -243,7 +246,7 @@ def train(cycle, trainloader_lab, trainloader_unlab, scheduler, optimizer):
         (inputs_lab, _), targets_lab = batch_lab
         inputs_lab, targets_lab = inputs_lab.to(device), targets_lab.to(device)
        
-        
+        targets_lab = targets_lab - 5   
         outputs_lab = net(inputs_lab)
         loss_lab = criterion(outputs_lab, targets_lab)
         #inputs, targets = inputs.to(device), targets.to(device)
@@ -304,11 +307,12 @@ def train(cycle, trainloader_lab, trainloader_unlab, scheduler, optimizer):
         
         #progress_bar(i_iter, args.num_steps, 'Loss: %.6f | Loss_lab: %.6f'
             #% (loss.item(), loss_lab.item()))
+        
         if args.verbose:
             progress_bar(i_iter, args.num_steps, 'Loss: %.6f | Loss_lab: %.6f | Loss_unlab: %.6f'
                 % (train_loss/1000.0, train_loss_lab/1000.0, train_loss_unlab/1000.0))
-
-        if i_iter%1000==0:
+        
+        if i_iter%500==0:
             train_loss /= 1000
             train_loss_lab /= 1000
             train_loss_unlab /= 1000
@@ -371,7 +375,8 @@ def test(cycle, i_iter, loss, loss_lab, loss_unlab):
             log_probs = torch.log(probs)*(-1)
             U = (probs*log_probs).sum(1)
             U_all.append(U)
-        
+       
+            targets = targets -5 
             loss = criterion(outputs, targets)
 
             test_loss += loss.item()

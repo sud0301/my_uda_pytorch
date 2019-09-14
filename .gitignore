@@ -2,6 +2,8 @@ checkpoint/
 data/
 results/
 models/
+scripts/
+
 results*.txt
 *.pkl
 __pycache__
