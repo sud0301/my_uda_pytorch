@@ -3,6 +3,8 @@ data/
 results/
 models/
 scripts/
+imagenet_t/
+imagenet_test/
 
 results*.txt
 *.pkl

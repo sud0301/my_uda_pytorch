@@ -197,7 +197,7 @@ if args.resume:
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4, nesterov=True)
 #optimizer = optim.Adam(net.parameters(), lr=args.lr, betas= (0.9, 0.999))
-scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_steps, eta_min=0.00001)
+scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_steps, eta_min=0.0001)
 
 def _kl_divergence_with_logits(p_logits, q_logits):
     p = torch.nn.functional.softmax(p_logits, dim=1)
