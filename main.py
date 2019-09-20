@@ -39,7 +39,7 @@ parse.add_argument('--confidence-mask', default=-1, type=float, help='Confidence
 
 parse.add_argument('--num-labeled', default=1000, type=int, help='number of labeled_samples')
 
-parse.add_argument('--batch-size-lab', default=64, type=int, help='training batch size')
+parse.add_argument('--batch-size-lab', default=32, type=int, help='training batch size')
 parse.add_argument('--batch-size-unlab', default=320, type=int, help='training batch size')
 parse.add_argument('--num-steps', default=100000, type=int, help='number of iterations')
 parse.add_argument('--lr-warm-up', action='store_true', help='increase lr slowly')
