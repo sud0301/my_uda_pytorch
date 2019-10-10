@@ -91,6 +91,7 @@ parse.add_argument('--cutout', action='store_true', help='use cutout augmentatio
 parse.add_argument('--n-holes', default=1, type=float, help='number of holes for cutout')
 parse.add_argument('--cutout-size', default=16, type=float, help='size of the cutout window')
 parse.add_argument('--autoaugment', action='store_true', help='use autoaugment augmentation')
+parse.add_argument('--loss-lambda', default=1.0, type=float, help='weightage of the unlabeled loss')
 
 args = parse.parse_args()
 state = {k: v for k, v in args._get_kwargs()}
@@ -256,8 +257,9 @@ def main():
         checkpoint = torch.load(args.resume)
         best_acc = checkpoint['best_acc']
         start_iter = checkpoint['iter']
-        model.load_state_dict(checkpoint['state_dict'])
+        net.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
+        scheduler.load_state_dict(checkpoint['scheduler'])
         logger = Logger(os.path.join(args.checkpoint, 'log.txt'), title=title, resume=True)
     else:
         logger = Logger(os.path.join(args.checkpoint, 'log.txt'), title=title)
@@ -359,7 +361,7 @@ def train(trainloader_lab, trainloader_unlab, testloader, net, scheduler, optimi
                          torch.nn.functional.softmax(outputs_unlab, dim=1).detach(), reduction='batchmean') 
        
             train_loss_unlab.update(loss_unlab.item())
-        loss = loss_lab + loss_unlab
+        loss = loss_lab + args.loss_lambda*loss_unlab
         train_loss.update(loss.item())
 
         loss.backward()
@@ -376,16 +378,19 @@ def train(trainloader_lab, trainloader_unlab, testloader, net, scheduler, optimi
         if args.verbose:
             progress_bar(i_iter, args.num_steps, 'Loss: %.6f | Loss_lab: %.6f | Loss_unlab: %.6f'
                 % (train_loss.avg, train_loss_lab.avg, train_loss_unlab.avg))
+        else: 
+            if i_iter%1000==0:
+                print (i_iter, ' Train loss: ', train_loss.avg, ' Loss lab: ', train_loss_lab.avg, ' Loss unlab: ', train_loss_unlab.avg)
 
-        if i_iter%5000==0 and i_iter>0:
-            test_loss, test_acc = test(net, testloader, criterion, optimizer, i_iter)
+        if i_iter%5000==0:
+            test_loss, test_acc = test(net, testloader, criterion, optimizer, scheduler, i_iter)
             logger.append([state['lr'], train_loss.avg, test_loss, test_acc])
 
     logger.close()
     logger.plot()
     savefig(os.path.join(args.checkpoint, 'log.eps'))
        
-def test(net, testloader, criterion, optimizer, i_iter):
+def test(net, testloader, criterion, optimizer, scheduler, i_iter):
     global best_acc
 
     test_loss = AverageMeter()
@@ -410,6 +415,8 @@ def test(net, testloader, criterion, optimizer, i_iter):
             if args.verbose:
                 progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                     % (test_loss.avg, 100.*correct/total, correct, total))
+            else:
+                print('Test loss: ', test_loss.avg, ' Accuracy: ', 100.*correct/total)
      
     # Save checkpoint.
     test_acc = 100.*correct/total
@@ -423,6 +430,7 @@ def test(net, testloader, criterion, optimizer, i_iter):
             'acc': test_acc,
             'best_acc': best_acc,
             'optimizer' : optimizer.state_dict(),
+            'scheduler' : scheduler.state_dict(),
         }, is_best, checkpoint=args.checkpoint)
     
     return (test_loss.avg, test_acc)

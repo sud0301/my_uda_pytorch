@@ -5,6 +5,8 @@ models/
 scripts/
 imagenet_t/
 imagenet_test/
+imagenet_*
+splits/
 
 results*.txt
 *.pkl
