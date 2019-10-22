@@ -113,7 +113,7 @@ def show_mask(images, masklist, Mean=(2, 2, 2), Std=(0.5,0.5,0.5)):
 # out_im = make_image(out)
 # plt.imshow(out_im)
 # plt.show()
-
+'''
 _, term_width = os.popen('stty size', 'r').read().split()
 term_width = int(term_width)
 
@@ -194,3 +194,4 @@ def format_time(seconds):
     if f == '':
         f = '0ms'
     return f
+'''

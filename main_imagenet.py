@@ -19,14 +19,14 @@ from torch.utils import data
 import torchvision
 import torchvision.transforms as transforms
 import torchvision.models as models
-from utils import progress_bar
+#from utils import progress_bar
 from augment.cutout import Cutout
 
 #from wrn import wrn
 #from autoaugment_extra_only_color import CIFAR10Policy
 from augment.autoaugment_extra import CIFAR10Policy, ImageNetPolicy
 
-from utils import Logger, AverageMeter, mkdir_p, savefig, progress_bar
+from utils import Logger, AverageMeter, mkdir_p, savefig#, progress_bar
 
 
 #Models
@@ -34,6 +34,7 @@ model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
 
+torch.backends.cudnn.enabled = True
 
 DATASET = 'ImageNet' # 'CIFAR10'
 SEED = 1
@@ -41,7 +42,9 @@ SPLIT_ID = None
 
 parse = argparse.ArgumentParser(description='PyTorch SSL CIFAR10 UDA Training')
 parse.add_argument('--dataset', type=str, default=DATASET, help='dataset')
-parse.add_argument('-d', '--imagenet-data', default='/misc/lmbraid19/mittal/my_repos/cloned_repos/pytorch-classification/data/', type=str)
+#parse.add_argument('-d', '--imagenet-data', default='/misc/lmbraid19/mittal/my_repos/cloned_repos/pytorch-classification/data/', type=str)
+parse.add_argument('-d', '--imagenet-data-train', default='/misc/lmbssd/marrakch/ILSVRC2015/Data/CLS-LOC/', type=str)
+parse.add_argument('--imagenet-data-val', default='/misc/lmbraid19/mittal/my_repos/cloned_repos/pytorch-classification/data/', type=str)
 parse.add_argument('--num-classes', default=1000, type=int, help='number of classes')
 
 parse.add_argument('--lr', default=0.3, type=float, help='learning rate')
@@ -56,7 +59,8 @@ parse.add_argument('--start-iter', default=0, type=int, metavar='N',
 
 parse.add_argument('--batch-size-lab', default=64, type=int, help='training batch size')
 parse.add_argument('--batch-size-unlab', default=640, type=int, help='training batch size')
-parse.add_argument('--num-steps', default=400000, type=int, help='number of iterations')
+parse.add_argument('--num-steps', default=100000, type=int, help='number of iterations')
+parse.add_argument('--num-epochs', default=40, type=int, help='number of iterations')
 parse.add_argument('--lr-warm-up', action='store_true', help='increase lr slowly')
 parse.add_argument('--warm-up-steps', default=20000, type=int, help='number of iterations for warmup')
 
@@ -165,7 +169,7 @@ def main():
         transform_aug = transforms.Compose([
             ImageNetPolicy(),
             transforms.ToTensor(),
-            Cutout(n_holes=1, length=56),
+            #Cutout(n_holes=1, length=56),
             transforms.ToPILImage(),
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(), 
@@ -189,8 +193,8 @@ def main():
         labelset = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_test)
         testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
     elif args.dataset == 'ImageNet':
-        traindir = os.path.join(args.imagenet_data, 'train')
-        valdir = os.path.join(args.imagenet_data, 'val')
+        traindir = os.path.join(args.imagenet_data_train, 'train')
+        valdir = os.path.join(args.imagenet_data_val, 'val')
         trainset = torchvision.datasets.ImageFolder(traindir, transform=transform_train)
         testset = torchvision.datasets.ImageFolder(valdir, transform=transform_test)    
 
@@ -205,13 +209,21 @@ def main():
     #pickle.dump(train_ids, open(os.path.join(args.checkpoint, 'train_id_' + str(args.seed) + '.pkl'), 'wb'))
 
     if args.lab_only:
+        num_labeled = int(args.percent_labeled*len(train_ids)/100.0)
+        print ('Num labeled: ', num_labeled)
+        train_ids = train_ids[:num_labeled]
+    
         train_sampler_lab = data.sampler.SubsetRandomSampler(train_ids)
         train_sampler_unlab = data.sampler.SubsetRandomSampler(train_ids)
 
-        trainloader_lab = data.DataLoader(trainset, batch_size=args.batch_size_lab, sampler=train_sampler_lab, num_workers=16, drop_last=True)
-        trainloader_unlab = data.DataLoader(trainset, batch_size=args.batch_size_unlab, sampler=train_sampler_unlab, num_workers=16, pin_memory=True)
+        trainloader_lab = data.DataLoader(trainset, batch_size=args.batch_size_lab, sampler=train_sampler_lab, num_workers=12, drop_last=True, pin_memory=True)
+        trainloader_unlab = data.DataLoader(trainset, batch_size=args.batch_size_unlab, sampler=train_sampler_unlab, num_workers=1)
+        
+        #args.num_steps = int((num_labeled/args.batch_size_lab)*args.num_epochs)
+        #print ('NUM STEPS: ', args.num_steps)
 
     else:
+        '''
         if args.new_splits:
             mask = np.zeros(train_ids.shape[0], dtype=np.bool)
             labels = np.array([trainset[i][1] for i in train_ids], dtype=np.int64)
@@ -226,16 +238,23 @@ def main():
         else:
             labeled_indices = pickle.load(open(os.path.join(args.checkpoint, 'labeled_idxs_' + str(args.percent_labeled) + '_' + str(args.seed) + '.pkl'), 'rb'))
             unlabeled_indices = pickle.load(open(os.path.join(args.checkpoint, 'unlabeled_idxs_' + str(args.percent_labeled) + '_' + str(args.seed) + '.pkl'), 'rb'))
+        '''
+        num_labeled = int(args.percent_labeled*len(train_ids)/100.0)
+        print ('Num labeled: ', num_labeled)
+        #train_ids = train_ids[:num_labeled]
+        labeled_indices = train_ids[:num_labeled]
+        unlabeled_indices = train_ids[num_labeled:]
 
         print ('Labeled indices: ', len(labeled_indices), ' Unlabeled indices: ', len(unlabeled_indices))
         
         train_sampler_lab = data.sampler.SubsetRandomSampler(labeled_indices)
         train_sampler_unlab = data.sampler.SubsetRandomSampler(unlabeled_indices)
 
-        trainloader_lab = data.DataLoader(trainset, batch_size=args.batch_size_lab, sampler=train_sampler_lab, num_workers=16, drop_last=True)
-        trainloader_unlab = data.DataLoader(trainset, batch_size=args.batch_size_unlab, sampler=train_sampler_unlab, num_workers=16, pin_memory=True)
+        trainloader_lab = data.DataLoader(trainset, batch_size=args.batch_size_lab, sampler=train_sampler_lab, num_workers=6, drop_last=True)
+        trainloader_unlab = data.DataLoader(trainset, batch_size=args.batch_size_unlab, sampler=train_sampler_unlab, num_workers=6)
+        #args.num_steps = int((num_labeled/args.batch_size_lab)*args.num_epochs)
 
-    testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=16)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=4)
 
     # Model
     print('==> Building model..')
@@ -243,9 +262,11 @@ def main():
     net = torch.nn.DataParallel(net).cuda()
     cudnn.benchmark = True
 
+
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4, nesterov=True)
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_steps, eta_min=0.0001)
+    #scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_steps, eta_min=0.001)
+    #scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_steps, eta_min=0.001)
     
     # Resume
     title = 'ImageNet-' + args.arch
@@ -259,7 +280,7 @@ def main():
         start_iter = checkpoint['iter']
         net.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        scheduler.load_state_dict(checkpoint['scheduler'])
+        #scheduler.load_state_dict(checkpoint['scheduler'])
         logger = Logger(os.path.join(args.checkpoint, 'log.txt'), title=title, resume=True)
     else:
         logger = Logger(os.path.join(args.checkpoint, 'log.txt'), title=title)
@@ -272,7 +293,7 @@ def main():
         print(' Test Loss:  %.8f, Test Acc:  %.2f' % (test_loss, test_acc))
         return
     '''
-    train(trainloader_lab, trainloader_unlab, testloader, net, scheduler, optimizer, criterion, start_iter, logger) 
+    train(trainloader_lab, trainloader_unlab, testloader, net, optimizer, criterion, start_iter, logger) 
 
 def _kl_divergence_with_logits(p_logits, q_logits):
     p = torch.nn.functional.softmax(p_logits, dim=1)
@@ -288,7 +309,7 @@ def set_optimizer_lr(optimizer, lr):
     return optimizer
 
 # Training
-def train(trainloader_lab, trainloader_unlab, testloader, net, scheduler, optimizer, criterion, start_iter, logger):
+def train(trainloader_lab, trainloader_unlab, testloader, net, optimizer, criterion, start_iter, logger):
     
     train_loss = AverageMeter()
     train_loss_lab = AverageMeter()
@@ -306,9 +327,18 @@ def train(trainloader_lab, trainloader_unlab, testloader, net, scheduler, optimi
                 warmup_lr = i_iter/args.warm_up_steps* args.lr
                 optimizer = set_optimizer_lr(optimizer, warmup_lr)
   
-        if i_iter%1000==0:
-            for param_group in optimizer.param_groups:
-                print(param_group['lr'])
+        if i_iter==int(args.num_steps/3):
+            args.lr = args.lr/10
+            optimizer = set_optimizer_lr(optimizer, args.lr)
+        
+        if i_iter==int(2*args.num_steps/3):
+            args.lr = args.lr/10
+            optimizer = set_optimizer_lr(optimizer, args.lr)
+
+        if i_iter==int(8*args.num_steps/9):
+            args.lr = args.lr/10
+            optimizer = set_optimizer_lr(optimizer, args.lr)
+            
         
         try:
             batch_lab = next(trainloader_lab_iter)
@@ -366,7 +396,7 @@ def train(trainloader_lab, trainloader_unlab, testloader, net, scheduler, optimi
 
         loss.backward()
         optimizer.step()
-        scheduler.step()
+        #scheduler.step()
         
         #train_loss += loss.item()
         #train_loss_lab += loss_lab.item()
@@ -382,15 +412,15 @@ def train(trainloader_lab, trainloader_unlab, testloader, net, scheduler, optimi
             if i_iter%1000==0:
                 print (i_iter, ' Train loss: ', train_loss.avg, ' Loss lab: ', train_loss_lab.avg, ' Loss unlab: ', train_loss_unlab.avg)
 
-        if i_iter%5000==0:
-            test_loss, test_acc = test(net, testloader, criterion, optimizer, scheduler, i_iter)
+        if i_iter%5000==0 and i_iter>0:
+            test_loss, test_acc = test(net, testloader, criterion, optimizer, i_iter)
             logger.append([state['lr'], train_loss.avg, test_loss, test_acc])
 
     logger.close()
     logger.plot()
     savefig(os.path.join(args.checkpoint, 'log.eps'))
        
-def test(net, testloader, criterion, optimizer, scheduler, i_iter):
+def test(net, testloader, criterion, optimizer, i_iter):
     global best_acc
 
     test_loss = AverageMeter()
@@ -430,7 +460,7 @@ def test(net, testloader, criterion, optimizer, scheduler, i_iter):
             'acc': test_acc,
             'best_acc': best_acc,
             'optimizer' : optimizer.state_dict(),
-            'scheduler' : scheduler.state_dict(),
+            #'scheduler' : scheduler.state_dict(),
         }, is_best, checkpoint=args.checkpoint)
     
     return (test_loss.avg, test_acc)
