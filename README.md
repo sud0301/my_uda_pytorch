@@ -15,7 +15,7 @@ python main.py \
 
 #### Results on CIFAR-10
 
-| # Labels                   |  Accuracy (%) |
+| # Labels                   |  Error (%) |
 | -----------------          | ----- |
 | 250                        | 11    |
 | 500                        | 9.1   |
