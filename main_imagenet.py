@@ -169,7 +169,7 @@ def main():
         transform_aug = transforms.Compose([
             ImageNetPolicy(),
             transforms.ToTensor(),
-            #Cutout(n_holes=1, length=56),
+            Cutout(n_holes=1, length=56),
             transforms.ToPILImage(),
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(), 
@@ -250,8 +250,8 @@ def main():
         train_sampler_lab = data.sampler.SubsetRandomSampler(labeled_indices)
         train_sampler_unlab = data.sampler.SubsetRandomSampler(unlabeled_indices)
 
-        trainloader_lab = data.DataLoader(trainset, batch_size=args.batch_size_lab, sampler=train_sampler_lab, num_workers=6, drop_last=True)
-        trainloader_unlab = data.DataLoader(trainset, batch_size=args.batch_size_unlab, sampler=train_sampler_unlab, num_workers=6)
+        trainloader_lab = data.DataLoader(trainset, batch_size=args.batch_size_lab, sampler=train_sampler_lab, num_workers=4, drop_last=True)
+        trainloader_unlab = data.DataLoader(trainset, batch_size=args.batch_size_unlab, sampler=train_sampler_unlab, num_workers=4)
         #args.num_steps = int((num_labeled/args.batch_size_lab)*args.num_epochs)
 
     testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=4)
@@ -326,7 +326,8 @@ def train(trainloader_lab, trainloader_unlab, testloader, net, optimizer, criter
             if i_iter < args.warm_up_steps:
                 warmup_lr = i_iter/args.warm_up_steps* args.lr
                 optimizer = set_optimizer_lr(optimizer, warmup_lr)
-  
+
+ 
         if i_iter==int(args.num_steps/3):
             args.lr = args.lr/10
             optimizer = set_optimizer_lr(optimizer, args.lr)
@@ -411,6 +412,8 @@ def train(trainloader_lab, trainloader_unlab, testloader, net, optimizer, criter
         else: 
             if i_iter%1000==0:
                 print (i_iter, ' Train loss: ', train_loss.avg, ' Loss lab: ', train_loss_lab.avg, ' Loss unlab: ', train_loss_unlab.avg)
+                for param_group in optimizer.param_groups:
+                    print(param_group['lr'])
 
         if i_iter%5000==0 and i_iter>0:
             test_loss, test_acc = test(net, testloader, criterion, optimizer, i_iter)
