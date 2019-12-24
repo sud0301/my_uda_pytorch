@@ -47,7 +47,7 @@ parse.add_argument('-d', '--imagenet-data-train', default='/misc/lmbssd/marrakch
 parse.add_argument('--imagenet-data-val', default='/misc/lmbraid19/mittal/my_repos/cloned_repos/pytorch-classification/data/', type=str)
 parse.add_argument('--num-classes', default=1000, type=int, help='number of classes')
 
-parse.add_argument('--lr', default=0.3, type=float, help='learning rate')
+parse.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parse.add_argument('--softmax-temp', default=-1, type=float, help='softmax temperature controlling')
 parse.add_argument('--confidence-mask', default=-1, type=float, help='Confidence value for masking')
 
@@ -59,7 +59,7 @@ parse.add_argument('--start-iter', default=0, type=int, metavar='N',
 
 parse.add_argument('--batch-size-lab', default=64, type=int, help='training batch size')
 parse.add_argument('--batch-size-unlab', default=640, type=int, help='training batch size')
-parse.add_argument('--num-steps', default=100000, type=int, help='number of iterations')
+parse.add_argument('--num-steps', default=40000, type=int, help='number of iterations')
 parse.add_argument('--num-epochs', default=40, type=int, help='number of iterations')
 parse.add_argument('--lr-warm-up', action='store_true', help='increase lr slowly')
 parse.add_argument('--warm-up-steps', default=20000, type=int, help='number of iterations for warmup')
@@ -75,7 +75,7 @@ parse.add_argument('--verbose', action='store_true', help='show progress bar')
 parse.add_argument('--seed', default=SEED, type=int, help='seed index')
 
 # Architectures 
-parse.add_argument('--arch', '-a', metavar='ARCH', default='resnet18',
+parse.add_argument('--arch', '-a', metavar='ARCH', default='resnet50',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
@@ -169,7 +169,7 @@ def main():
         transform_aug = transforms.Compose([
             ImageNetPolicy(),
             transforms.ToTensor(),
-            Cutout(n_holes=1, length=56),
+            #Cutout(n_holes=1, length=56),
             transforms.ToPILImage(),
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(), 
@@ -244,7 +244,7 @@ def main():
         #train_ids = train_ids[:num_labeled]
         labeled_indices = train_ids[:num_labeled]
         unlabeled_indices = train_ids[num_labeled:]
-
+        
         print ('Labeled indices: ', len(labeled_indices), ' Unlabeled indices: ', len(unlabeled_indices))
         
         train_sampler_lab = data.sampler.SubsetRandomSampler(labeled_indices)
@@ -328,7 +328,7 @@ def train(trainloader_lab, trainloader_unlab, testloader, net, optimizer, criter
                 optimizer = set_optimizer_lr(optimizer, warmup_lr)
 
  
-        if i_iter==int(args.num_steps/3):
+        if i_iter==int(1*args.num_steps/3):
             args.lr = args.lr/10
             optimizer = set_optimizer_lr(optimizer, args.lr)
         
@@ -410,7 +410,7 @@ def train(trainloader_lab, trainloader_unlab, testloader, net, optimizer, criter
             progress_bar(i_iter, args.num_steps, 'Loss: %.6f | Loss_lab: %.6f | Loss_unlab: %.6f'
                 % (train_loss.avg, train_loss_lab.avg, train_loss_unlab.avg))
         else: 
-            if i_iter%1000==0:
+            if i_iter%100==0:
                 print (i_iter, ' Train loss: ', train_loss.avg, ' Loss lab: ', train_loss_lab.avg, ' Loss unlab: ', train_loss_unlab.avg)
                 for param_group in optimizer.param_groups:
                     print(param_group['lr'])

@@ -17,8 +17,11 @@ import argparse
 import pickle
 import numpy as np
 
+#import dataloader
+#from dataloader import DataLoader
+
 #from models.senet import *
-#from utils import progress_bar
+from utils import progress_bar
 from augment.cutout import Cutout
 
 #from resnet import resnet18
@@ -60,6 +63,12 @@ parse.add_argument('--cutout', action='store_true', help='use cutout augmentatio
 parse.add_argument('--n-holes', default=1, type=float, help='number of holes for cutout')
 parse.add_argument('--cutout-size', default=16, type=float, help='size of the cutout window')
 parse.add_argument('--autoaugment', action='store_true', help='use autoaugment augmentation')
+parse.add_argument('--w-lab', default=0.3, type=float, help='weightage of sup loss')
+parse.add_argument('--w-unlab', default=0.3, type=float, help='weightage of unlab loss')
+parse.add_argument('--rot', action='store_true', help='use rotation loss')
+parse.add_argument('--w-rot', default=0.7, type=float, help='weightage of rot loss')
+parse.add_argument('--entmin', action='store_true', help='use entropy minimization loss')
+parse.add_argument('--w-entmin', default=0.3, type=float, help='weightage of entmin loss')
 
 args = parse.parse_args()
 
@@ -73,6 +82,24 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 start_epoch = 1  # start from epoch 0 or last checkpoint epoch
 np.random.seed(args.seed)
+
+def rotate_90(img, n):
+    return np.rot90(img, n, (1, 2))
+
+def collate(batch):
+    rot_imgs = []
+    rot_labels = []
+    imgs = []
+    aug_imgs = []
+    for ((x, x_aug),_) in batch:
+        # TODO: we can try randomizing the rotation here. 
+        for n in [0, 1, 2, 3]:
+            rot_imgs.append(torch.FloatTensor(rotate_90(x.numpy(), n).copy()))
+            rot_labels.append(torch.tensor(n))
+        imgs.append(x)
+        aug_imgs.append(x_aug)
+
+    return [torch.stack(imgs), torch.stack(aug_imgs), torch.stack(rot_imgs), torch.stack(rot_labels)]
 
 class TransformTwice:
     def __init__(self, transform, aug_transform):
@@ -154,7 +181,7 @@ labeled_indices, unlabeled_indices = train_ids[mask], train_ids[~ mask]
 mask_ = np.zeros(train_ids.shape[0], dtype=np.bool)
 mask_test = np.zeros(test_ids.shape[0], dtype=np.bool)
 labels_test = np.array([testset[i][1] for i in test_ids], dtype=np.int64)
-for i in range(10):
+for i in range(args.num_classes):
     mask[np.where(labels == i)[0][: int(args.num_labeled / args.num_classes)]] = True
     mask_[np.where(labels == i)[0][int(args.num_labeled / args.num_classes): ]] = True
     mask_test[np.where(labels_test == i)[0]] = True
@@ -165,10 +192,13 @@ train_sampler_lab = data.sampler.SubsetRandomSampler(labeled_indices)
 train_sampler_unlab = data.sampler.SubsetRandomSampler(unlabeled_indices)
 test_sampler = data.sampler.SubsetRandomSampler(test_indices)
 
-trainloader_lab = data.DataLoader(trainset, batch_size=args.batch_size_lab, sampler=train_sampler_lab, num_workers=16, drop_last=True)
-trainloader_unlab = data.DataLoader(trainset, batch_size=args.batch_size_unlab, sampler=train_sampler_unlab, num_workers=16, pin_memory=True)
+trainloader_lab = data.DataLoader(trainset, batch_size=args.batch_size_lab, sampler=train_sampler_lab, num_workers=4, drop_last=True)
+if args.rot:
+    trainloader_unlab = data.DataLoader(trainset, collate_fn=collate, batch_size=args.batch_size_unlab, sampler=train_sampler_unlab, num_workers=8, pin_memory=True)
+else:
+    trainloader_unlab = data.DataLoader(trainset, batch_size=args.batch_size_unlab, sampler=train_sampler_unlab, num_workers=8, pin_memory=True)
 
-trainloader_val = data.DataLoader(labelset, batch_size=100, sampler=train_sampler_lab, num_workers=16, drop_last=False)
+trainloader_val = data.DataLoader(labelset, batch_size=100, sampler=train_sampler_lab, num_workers=8, drop_last=False)
 
 testloader = data.DataLoader(testset, batch_size=100, sampler=test_sampler, num_workers=16)
 #testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=16)
@@ -211,12 +241,15 @@ def set_optimizer_lr(optimizer, lr):
         param_group['lr'] = lr
     return optimizer
 
+
 # Training
 def train(cycle, trainloader_lab, trainloader_unlab, scheduler, optimizer):
     print('\nCycle: %d' % cycle)
     train_loss = 0
     train_loss_lab = 0
     train_loss_unlab = 0
+    train_loss_rot = 0
+    train_loss_entmin = 0
     correct = 0
     total = 0
 
@@ -245,8 +278,7 @@ def train(cycle, trainloader_lab, trainloader_unlab, scheduler, optimizer):
         (inputs_lab, _), targets_lab = batch_lab
         inputs_lab, targets_lab = inputs_lab.to(device), targets_lab.to(device)
        
-        
-        outputs_lab = net(inputs_lab)
+        outputs_lab, _ = net(inputs_lab)
         loss_lab = criterion(outputs_lab, targets_lab)
         #inputs, targets = inputs.to(device), targets.to(device)
 
@@ -259,12 +291,17 @@ def train(cycle, trainloader_lab, trainloader_unlab, scheduler, optimizer):
             except:
                 trainloader_unlab_iter = iter(trainloader_unlab)
                 batch_unlab = next(trainloader_unlab_iter) 
-            
-            (inputs_unlab, inputs_unlab_aug), _ = batch_unlab
+
+            if args.rot:
+                [inputs_unlab, inputs_unlab_aug, inputs_rot, targets_rot] = batch_unlab           
+                inputs_rot, targets_rot = inputs_rot.cuda(), targets_rot.cuda()
+            else:
+                (inputs_unlab, inputs_unlab_aug), _ = batch_unlab
+
             inputs_unlab, inputs_unlab_aug = inputs_unlab.cuda(), inputs_unlab_aug.cuda()
            
-            outputs_unlab = net(inputs_unlab)
-            outputs_unlab_aug = net(inputs_unlab_aug)
+            outputs_unlab, _ = net(inputs_unlab)
+            outputs_unlab_aug, _ = net(inputs_unlab_aug)
 
             if args.softmax_temp != -1:
                
@@ -285,13 +322,33 @@ def train(cycle, trainloader_lab, trainloader_unlab, scheduler, optimizer):
                          torch.nn.functional.log_softmax(outputs_unlab_aug, dim=1), 
                          torch.nn.functional.softmax(outputs_unlab, dim=1).detach(), reduction='batchmean') 
 
-            loss = loss_lab + loss_unlab
+            loss = args.w_lab*loss_lab + args.w_unlab*loss_unlab
+    
+            if args.entmin:    
+                unlab_prob = torch.nn.functional.softmax(outputs_unlab, dim=1)
+                unlab_log_prob = torch.log(unlab_prob.detach())
+                ent = (-1.0*unlab_prob*unlab_log_prob).sum(1)
+                loss_entmin = torch.mean(ent)
+                loss += args.w_entmin*loss_entmin
+                
+            if args.rot:
+                _, outputs_rot = net(inputs_rot)
+                loss_rot = criterion(outputs_rot, targets_rot)
+                loss +=  args.w_rot*loss_rot
+
+            #loss = args.w_lab*loss_lab + args.w_unlab*loss_unlab + args.w_rot*loss_rot + args.w_entmin*loss_entmin
 
             ''' 
             loss_unlab = torch.nn.functional.kl_div( 
                          torch.nn.functional.log_softmax(outputs_unlab_aug/args.softmax_temp, dim=1), 
                          torch.nn.functional.softmax(outputs_unlab/args.softmax_temp, dim=1).detach(), reduction='batchmean') 
             '''
+        '''
+        if i_iter==9.0*args.num_steps/10.0:
+            args.w_lab = 1.0
+            args.w_unlab = 0.0
+            args.w_rot = 0.0
+        '''
 
         loss.backward()
         optimizer.step()
@@ -301,14 +358,20 @@ def train(cycle, trainloader_lab, trainloader_unlab, scheduler, optimizer):
         train_loss_lab += loss_lab.item()
         if args.lab_only:
             train_loss_unlab = 0.0
+            train_loss_rot = 0.0
+            train_loss_entmin = 0.0
         else:
             train_loss_unlab += loss_unlab.item()
+            if args.rot:
+                train_loss_rot += loss_rot.item()
+            if args.entmin:
+                train_loss_entmin += loss_entmin.item()
         
         #progress_bar(i_iter, args.num_steps, 'Loss: %.6f | Loss_lab: %.6f'
             #% (loss.item(), loss_lab.item()))
         if args.verbose:
-            progress_bar(i_iter, args.num_steps, 'Loss: %.6f | Loss_lab: %.6f | Loss_unlab: %.6f'
-                % (train_loss/1000.0, train_loss_lab/1000.0, train_loss_unlab/1000.0))
+            progress_bar(i_iter, args.num_steps, 'Loss: %.6f | Loss_lab: %.6f | Loss_unlab: %.6f | Loss_rot: %.6f | Loss_entmin: %.6f'
+                % (train_loss/1000.0, train_loss_lab/1000.0, train_loss_unlab/1000.0, train_loss_rot/1000.0, train_loss_entmin/1000.0))
 
         if i_iter%1000==0:
             train_loss /= 1000
@@ -321,6 +384,8 @@ def train(cycle, trainloader_lab, trainloader_unlab, scheduler, optimizer):
             train_loss = 0
             train_loss_lab = 0
             train_loss_unlab = 0
+            train_loss_rot = 0
+            train_loss_entmin = 0
        
    
 def val():
@@ -334,7 +399,7 @@ def val():
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(trainloader_val):
             inputs, targets = inputs.to(device), targets.to(device)
-            outputs = net(inputs)
+            outputs, _ = net(inputs)
 
             probs = F.softmax(outputs, dim=1)
             log_probs = torch.log(probs)*(-1)
@@ -367,7 +432,7 @@ def test(cycle, i_iter, loss, loss_lab, loss_unlab):
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(testloader):
             inputs, targets = inputs.to(device), targets.to(device)
-            outputs = net(inputs)
+            outputs, _ = net(inputs)
 
             probs = F.softmax(outputs, dim=1)
             log_probs = torch.log(probs)*(-1)
