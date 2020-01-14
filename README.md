@@ -1,4 +1,4 @@
-## Pytorch Implementation of Unsupervised Data Augmentation
+## Pytorch Implementation of Unsupervised Data Augmentation for Consistency Training
 
 ```
 python main.py \
@@ -14,13 +14,16 @@ python main.py \
     --rot 
 ```
 
+Use **rot** flag for using rotation loss from S4L paper.
+Run for 400k iterations(num-steps) for improved results.  
+
 #### Results on CIFAR-10
 
-| # Labels                   |  UDA Paper |  UDA Repo  | UDA + Rotation |
+| # Labels                   |  UDA Paper |  This UDA Repo  | with Rotation(rot) |
 | -----------------          | ----  | ----- | ---- |
 | 250                        | 8.76  | 11    |  8.2 |
-| 500                        | 6.68  | 9.1   |  7.7 |
+| 500                        | 6.68  | 9.1   |  6.4 |
 | 1000                       | 5.87  | 7.8   |  5.8 |
-| 2000                       | 5.51  | 6.9   |  6.1 |
+| 2000                       | 5.51  | 6.9   |  5.7 |
 | 4000                       | 5.29  | 6.1   |  5.1 |
 
