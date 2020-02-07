@@ -64,6 +64,7 @@ class WideResNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.fc = nn.Linear(nChannels[3], num_classes)
         self.fc_rot = nn.Linear(nChannels[3], 4)
+        #self.fc_lul = nn.Linear(nChannels[3], 2)
         self.nChannels = nChannels[3]
 
         for m in self.modules():
@@ -86,7 +87,7 @@ class WideResNet(nn.Module):
         out = self.relu(self.bn1(out))
         out = F.avg_pool2d(out, 8)
         out = out.view(-1, self.nChannels)
-        return self.fc(out), self.fc_rot(out) 
+        return self.fc(out), self.fc_rot(out)#, self.fc_lul(out) 
 
 def wrn(**kwargs):
     """

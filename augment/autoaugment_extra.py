@@ -46,7 +46,121 @@ class ImageNetPolicy(object):
             SubPolicy(0.6, "solarize", 5, 0.6, "autocontrast", 5, fillcolor),
             SubPolicy(0.6, "invert", 4, 1.0, "equalize", 8, fillcolor),
             SubPolicy(0.6, "color", 4, 1.0, "contrast", 8, fillcolor),
-            SubPolicy(0.8, "equalize", 8, 0.6, "equalize", 3, fillcolor)
+            SubPolicy(0.8, "equalize", 8, 0.6, "equalize", 3, fillcolor),
+            
+            SubPolicy(0.1, "invert", 7, 0.2, "contrast", 6, fillcolor),  # set-1
+            SubPolicy(0.7, "rotate", 2, 0.3, "translateX", 9, fillcolor),
+            SubPolicy(0.8, "sharpness", 1, 0.9, "sharpness", 3, fillcolor),
+            SubPolicy(0.5, "shearY", 8, 0.7, "translateY", 9, fillcolor),
+            SubPolicy(0.5, "autocontrast", 8, 0.9, "equalize", 2, fillcolor),
+
+            SubPolicy(0.2, "shearY", 7, 0.3, "posterize", 7, fillcolor), # set-3
+            SubPolicy(0.4, "color", 3, 0.6, "brightness", 7, fillcolor),
+            SubPolicy(0.3, "sharpness", 9, 0.7, "brightness", 9, fillcolor),
+            SubPolicy(0.6, "equalize", 5, 0.5, "equalize", 1, fillcolor),
+            SubPolicy(0.6, "contrast", 7, 0.6, "sharpness", 5, fillcolor),
+
+            SubPolicy(0.7, "color", 7, 0.5, "translateX", 8, fillcolor),    #set-11
+            SubPolicy(0.3, "equalize", 7, 0.4, "autocontrast", 8, fillcolor),
+            SubPolicy(0.4, "translateY", 3, 0.2, "sharpness", 6, fillcolor),
+            SubPolicy(0.9, "brightness", 6, 0.2, "color", 8, fillcolor),
+            SubPolicy(0.5, "solarize", 2, 0.0, "invert", 3, fillcolor),
+
+            SubPolicy(0.2, "equalize", 0, 0.6, "autocontrast", 0, fillcolor),
+            SubPolicy(0.2, "equalize", 8, 0.8, "equalize", 4, fillcolor),
+            SubPolicy(0.9, "color", 9, 0.6, "equalize", 6, fillcolor),
+            SubPolicy(0.8, "autocontrast", 4, 0.2, "solarize", 8, fillcolor),
+            SubPolicy(0.1, "brightness", 3, 0.7, "color", 0, fillcolor),
+
+            SubPolicy(0.4, "solarize", 5, 0.9, "autocontrast", 3, fillcolor), # set-2 
+            SubPolicy(0.9, "translateY", 9, 0.7, "translateY", 9, fillcolor),
+            SubPolicy(0.9, "autocontrast", 2, 0.8, "solarize", 3, fillcolor),
+            SubPolicy(0.8, "equalize", 8, 0.1, "invert", 3, fillcolor),
+            SubPolicy(0.7, "translateY", 9, 0.9, "autocontrast", 1, fillcolor),
+            
+            SubPolicy(0.4, "solarize",  5, 0.9, "autocontrast", 3, fillcolor), 
+            SubPolicy(0.9, "translateY", 9, 0.7, "translateY", 9, fillcolor),
+            SubPolicy(0.9, "autocontrast",  2, 0.8, "solarize", 3, fillcolor),
+            SubPolicy(0.8, "equalize",  8, 0.1, "invert", 3, fillcolor),
+            SubPolicy(0.7, "translateY", 9, 0.9, "autocontrast", 1, fillcolor),
+   
+            SubPolicy(0.4, "solarize",  5, 0.9, "autocontrast", 1, fillcolor), 
+            SubPolicy(0.8, "translateY",  9, 0.9, "translateY", 9, fillcolor),
+            SubPolicy(0.8, "autocontrast",  0, 0.7, "translateY", 9, fillcolor),
+            SubPolicy(0.2, "translateY",  7, 0.9, "color", 6, fillcolor),
+            SubPolicy(0.7, "equalize",  6, 0.4, "color", 9, fillcolor),
+             
+            SubPolicy(0.3, "brightness",  7, 0.5, "autocontrast", 8, fillcolor), 
+            SubPolicy(0.9, "autocontrast",  4, 0.5, "autocontrast", 6, fillcolor),
+            SubPolicy(0.3, "solarize",  5, 0.6, "equalize", 5, fillcolor),
+            SubPolicy(0.2, "translateY",  4, 0.3, "sharpness", 3, fillcolor),
+            SubPolicy(0.0, "brightness",  8, 0.8, "color", 8, fillcolor),
+
+            SubPolicy(0.2, "solarize",  6, 0.8, "color", 6, fillcolor), 
+            SubPolicy(0.2, "solarize",  6, 0.8, "autocontrast", 1, fillcolor),
+            SubPolicy(0.4, "solarize",  1, 0.6, "equalize", 5, fillcolor),
+            SubPolicy(0.0, "brightness",  0, 0.5, "solarize", 2, fillcolor),
+            SubPolicy(0.9, "autocontrast",  5, 0.5, "brightness", 3, fillcolor),
+
+            SubPolicy(0.7, "contrast",  5, 0.0, "brightness", 2, fillcolor), 
+            SubPolicy(0.2, "solarize",  8, 0.1, "solarize", 5, fillcolor),
+            SubPolicy(0.5, "contrast",  1, 0.2, "translateY", 9, fillcolor),
+            SubPolicy(0.6, "autocontrast",  5, 0.0, "translateY", 9, fillcolor),
+            SubPolicy(0.9, "autocontrast",  4, 0.8, "equalize", 4, fillcolor),
+            
+            SubPolicy(0.0, "brightness",  7, 0.4, "equalize", 7, fillcolor), 
+            SubPolicy(0.2, "solarize",  5, 0.7, "equalize", 5, fillcolor),
+            SubPolicy(0.6, "equalize",  8, 0.6, "color", 2, fillcolor),
+            SubPolicy(0.3, "color",  7, 0.2, "color", 4, fillcolor),
+            SubPolicy(0.5, "autocontrast",  2, 0.7, "solarize", 2, fillcolor),
+            
+            SubPolicy(0.2, "autocontrast",  0, 0.1, "equalize", 0, fillcolor), 
+            SubPolicy(0.6, "shearY",  5, 0.6, "equalize", 5, fillcolor),
+            SubPolicy(0.9, "brightness",  3, 0.4, "autocontrast", 1, fillcolor),
+            SubPolicy(0.8, "equalize",  8, 0.7, "equalize", 7, fillcolor),
+            SubPolicy(0.7, "equalize",  7, 0.5, "solarize", 0, fillcolor),
+            
+            SubPolicy(0.8, "equalize",  4, 0.8, "translateY", 9, fillcolor), 
+            SubPolicy(0.8, "translateY",  9, 0.6, "translateY", 9, fillcolor),
+            SubPolicy(0.9, "translateY",  0, 0.5, "translateY", 9, fillcolor),
+            SubPolicy(0.5, "autocontrast",  3, 0.3, "solarize", 4, fillcolor),
+            SubPolicy(0.5, "solarize",  3, 0.4, "equalize", 4, fillcolor),
+            
+            SubPolicy(0.1, "autocontrast",  5, 0.0, "brightness", 0, fillcolor), 
+            SubPolicy(0.7, "equalize",  7, 0.6, "autocontrast", 4, fillcolor),
+            SubPolicy(0.1, "color",  8, 0.2, "shearY", 3, fillcolor),
+            SubPolicy(0.4, "shearY",  2, 0.7, "rotate", 0, fillcolor),
+            
+            SubPolicy(0.1, "shearY",  3, 0.9, "autocontrast", 5, fillcolor), 
+            SubPolicy(0.5, "equalize",  0, 0.6, "solarize", 6, fillcolor),
+            SubPolicy(0.3, "autocontrast",  5, 0.2, "rotate", 7, fillcolor),
+            SubPolicy(0.8, "equalize",  2, 0.4, "invert", 0, fillcolor),
+            
+            SubPolicy(0.9, "equalize",  5, 0.7, "color", 0, fillcolor), 
+            SubPolicy(0.1, "equalize",  1, 0.1, "shearY", 3, fillcolor),
+            SubPolicy(0.7, "autocontrast",  3, 0.7, "equalize", 0, fillcolor),
+            SubPolicy(0.5, "brightness",  1, 0.1, "contrast", 7, fillcolor),
+            SubPolicy(0.1, "contrast",  4, 0.6, "solarize", 5, fillcolor),
+            
+            SubPolicy(0.2, "solarize",  3, 0.0, "shearX", 0, fillcolor), 
+            SubPolicy(0.3, "translateX",  0, 0.6, "translateX", 0, fillcolor),
+            SubPolicy(0.5, "equalize",  9, 0.6, "translateY", 7, fillcolor),
+            SubPolicy(0.1, "shearX",  0, 0.5, "sharpness", 1, fillcolor),
+            SubPolicy(0.8, "equalize",  6, 0.3, "invert", 6, fillcolor),
+            
+            SubPolicy(0.4, "shearX",  4, 0.9, "autocontrast", 2, fillcolor),
+            SubPolicy(0.0, "shearX",  3, 0.0, "posterize", 3, fillcolor),
+            SubPolicy(0.4, "solarize",  3, 0.2, "color", 4, fillcolor),
+            SubPolicy(0.1, "equalize",  4, 0.7, "equalize", 6, fillcolor),
+            
+            SubPolicy(0.3, "equalize",  8, 0.4, "autocontrast", 3, fillcolor), 
+            SubPolicy(0.6, "solarize",  4, 0.7, "autocontrast", 6, fillcolor),
+            SubPolicy(0.2, "autocontrast",  9, 0.4, "brightness", 8, fillcolor),
+            SubPolicy(0.1, "equalize",  0, 0.0, "equalize", 6, fillcolor),
+            SubPolicy(0.8, "equalize",  4, 0.0, "equalize", 4, fillcolor),
+            
+            SubPolicy(0.5, "equalize",  5, 0.1, "autocontrast", 2, fillcolor), 
+            SubPolicy(0.5, "solarize",  5, 0.9, "autocontrast", 5, fillcolor),
         ]
 
 
@@ -150,13 +264,11 @@ class CIFAR10Policy(object):
             SubPolicy(0.5, "solarize",  3, 0.4, "equalize", 4, fillcolor),
             
             SubPolicy(0.1, "autocontrast",  5, 0.0, "brightness", 0, fillcolor), 
-            SubPolicy(0.2, "cutout",  4, 0.1, "equalize", 1, fillcolor),
             SubPolicy(0.7, "equalize",  7, 0.6, "autocontrast", 4, fillcolor),
             SubPolicy(0.1, "color",  8, 0.2, "shearY", 3, fillcolor),
             SubPolicy(0.4, "shearY",  2, 0.7, "rotate", 0, fillcolor),
             
             SubPolicy(0.1, "shearY",  3, 0.9, "autocontrast", 5, fillcolor), 
-            SubPolicy(0.3, "translateY",  6, 0.3, "cutout", 3, fillcolor),
             SubPolicy(0.5, "equalize",  0, 0.6, "solarize", 6, fillcolor),
             SubPolicy(0.3, "autocontrast",  5, 0.2, "rotate", 7, fillcolor),
             SubPolicy(0.8, "equalize",  2, 0.4, "invert", 0, fillcolor),
@@ -173,7 +285,6 @@ class CIFAR10Policy(object):
             SubPolicy(0.1, "shearX",  0, 0.5, "sharpness", 1, fillcolor),
             SubPolicy(0.8, "equalize",  6, 0.3, "invert", 6, fillcolor),
             
-            SubPolicy(0.3, "autocontrast",  9, 0.5, "cutout", 3, fillcolor), 
             SubPolicy(0.4, "shearX",  4, 0.9, "autocontrast", 2, fillcolor),
             SubPolicy(0.0, "shearX",  3, 0.0, "posterize", 3, fillcolor),
             SubPolicy(0.4, "solarize",  3, 0.2, "color", 4, fillcolor),
